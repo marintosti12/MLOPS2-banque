@@ -1,0 +1,91 @@
+# --- OS / éditeurs ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# --- Environnements & gestionnaires ---
+.venv/
+venv/
+ENV/
+env/
+.python-version   # pyenv
+
+# --- Python généraux ---
+__pycache__/
+*.py[cod]
+*.so
+*.pyd
+*.pyo
+
+# --- Build / packaging ---
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# --- Tests / qualité ---
+.pytest_cache/
+.coverage*
+htmlcov/
+.mypy_cache/
+.pyre/
+.ruff_cache/
+.tox/
+
+# --- Jupyter / IPython ---
+.ipynb_checkpoints/
+.profile
+.ipynb_merged/
+jupyter_cache/
+
+# --- Configs & secrets ---
+.env
+.env.*
+*.env
+*.secret
+*.key
+*.pem
+*.crt
+
+# --- Logs ---
+logs/
+*.log
+
+# --- Données & artefacts (à adapter à ton projet) ---
+data/
+data_raw/
+data/interim/
+data/processed/
+datasets/
+outputs/
+reports/
+figures/
+tmp/
+temp/
+
+# --- Modèles / artefacts de training ---
+models/
+artifacts/
+checkpoints/
+*.pt
+*.pth
+*.h5
+*.onnx
+*.joblib
+*.pkl
+*.pickle
+
+# --- MLflow (tracking local) ---
+mlruns/
+mlartifacts/
+
+# --- Notebooks exportés / auxiliaires ---
+*.nbconvert.ipynb
+*.orig.ipynb
+
+# --- Divers caches ---
+.cache/
+**/.ipynb_checkpoints/
