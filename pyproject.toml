@@ -20,6 +20,13 @@ notebook = "^7.4.7"
 ipykernel = "^6.30.1"
 missingno = "^0.5.2"
 lightgbm = "^4.6.0"
+fastapi = "^0.121.1"
+pydantic = "^2.12.4"
+sqlalchemy = "^2.0.44"
+pydantic-settings = "^2.11.0"
+psycopg = {extras = ["binary"], version = "^3.2.12"}
+huggingface-hub = "^1.1.2"
+dotenv = "^0.9.9"
 
 
 [build-system]

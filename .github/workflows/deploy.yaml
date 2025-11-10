@@ -1,0 +1,84 @@
+name: Deploy to Hugging Face
+
+on:
+  workflow_run:
+    workflows: ["CI"]          
+    branches: [ main ]         
+    types: [completed]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-${{ github.event.workflow_run.head_branch || 'main' }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' }}
+
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      HF_SPACE_URL: ${{ secrets.HF_SPACE_URL }}
+      HF_GIT_EMAIL: ${{ secrets.HF_GIT_EMAIL || 'actions@github.com' }}
+      HF_GIT_NAME:  ${{ secrets.HF_GIT_NAME  || 'github-actions' }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true  
+
+      - name: Guard secrets
+        if: ${{ !env.HF_TOKEN || !env.HF_SPACE_URL }}
+        run: |
+          echo "HF secrets manquants, on skip le déploiement."
+          exit 0
+
+      - name: Configure Git identity (local)
+        shell: bash
+        run: |
+          git config user.email "${HF_GIT_EMAIL:-actions@github.com}"
+          git config user.name  "${HF_GIT_NAME:-github-actions}"
+
+      - name: Convert binaries to Git LFS
+        shell: bash
+        run: |
+          set -e
+          git lfs install
+          git lfs track "*.joblib" "*.pkl" "*.pt" "*.onnx"
+          git add .gitattributes
+          git commit -m "ci: track ML artifacts with LFS for Space push" || true
+
+         
+          git lfs migrate import --everything --include="*.joblib,notebook/df.joblib,*.pkl,*.pt,*.onnx"
+
+          git lfs status || true
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v3
+        with:
+          poetry-version: "1.8.3"
+
+      - name: Install deps (with dev)
+        run: poetry install --no-interaction --no-root
+
+      - name: Run Alembic migrations
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+        run: |
+          echo "Migrating DB: $DATABASE_URL"
+          PYTHONPATH=./src poetry run alembic upgrade head
+
+      - name: Push to Space
+        run: |
+          SPACE_URL_AUTH=$(echo "$HF_SPACE_URL" | sed "s#https://#https://user:${HF_TOKEN}@#")
+          git remote add space "$SPACE_URL_AUTH" || git remote set-url space "$SPACE_URL_AUTH"
+          git push space HEAD:main --force
