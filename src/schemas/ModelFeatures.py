@@ -1,36 +1,119 @@
-from pydantic import BaseModel
+from typing import List, Optional
+from pydantic import BaseModel, Field, field_validator
 
 class ModelFeatures(BaseModel):
-    id_employee: int
-    age: int
-    genre: str
-    revenu_mensuel: int
-    statut_marital: str
-    departement: str
-    poste: str
-    nombre_experiences_precedentes: int
-    nombre_heures_travailless: int
-    annee_experience_totale: int
-    annees_dans_l_entreprise: int
-    annees_dans_le_poste_actuel: int
-    nombre_participation_pee: int
-    nb_formations_suivies: int
-    nombre_employee_sous_responsabilite: int
-    code_sondage: int
-    distance_domicile_travail: int
-    niveau_education: int
-    domaine_etude: str
-    ayant_enfants: str
-    frequence_deplacement: str
-    annees_depuis_la_derniere_promotion: int
-    annes_sous_responsable_actuel: int
-    satisfaction_employee_environnement: int
-    note_evaluation_precedente: int
-    niveau_hierarchique_poste: int
-    satisfaction_employee_nature_travail: int
-    satisfaction_employee_equipe: int
-    satisfaction_employee_equilibre_pro_perso: int
-    eval_number: str
-    note_evaluation_actuelle: int
-    heure_supplementaires: str
-    augementation_salaire_precedente: int
+    SK_ID_CURR: int
+    CNT_CHILDREN: Optional[int] = None
+    AMT_INCOME_TOTAL: Optional[float] = Field(None, ge=0)
+    AMT_CREDIT: Optional[float] = Field(None, ge=0)
+    AMT_ANNUITY: Optional[float] = Field(None, ge=0)
+    AMT_GOODS_PRICE: Optional[float] = Field(None, ge=0)
+    REGION_POPULATION_RELATIVE: Optional[float] = None
+    DAYS_BIRTH: Optional[int] = None
+    DAYS_EMPLOYED: Optional[int] = None
+    DAYS_REGISTRATION: Optional[int] = None
+    DAYS_ID_PUBLISH: Optional[int] = None
+    OWN_CAR_AGE: Optional[float] = None
+    FLAG_MOBIL: Optional[int] = None
+    FLAG_EMP_PHONE: Optional[int] = None
+    FLAG_WORK_PHONE: Optional[int] = None
+    FLAG_CONT_MOBILE: Optional[int] = None
+    FLAG_PHONE: Optional[int] = None
+    FLAG_EMAIL: Optional[int] = None
+    CNT_FAM_MEMBERS: Optional[float] = None
+    REGION_RATING_CLIENT: Optional[int] = None
+    REGION_RATING_CLIENT_W_CITY: Optional[int] = None
+    HOUR_APPR_PROCESS_START: Optional[int] = None
+    REG_REGION_NOT_LIVE_REGION: Optional[int] = None
+    REG_REGION_NOT_WORK_REGION: Optional[int] = None
+    LIVE_REGION_NOT_WORK_REGION: Optional[int] = None
+    REG_CITY_NOT_LIVE_CITY: Optional[int] = None
+    REG_CITY_NOT_WORK_CITY: Optional[int] = None
+    LIVE_CITY_NOT_WORK_CITY: Optional[int] = None
+    EXT_SOURCE_1: Optional[float] = None
+    EXT_SOURCE_2: Optional[float] = None
+    EXT_SOURCE_3: Optional[float] = None
+    APARTMENTS_AVG: Optional[float] = None
+    BASEMENTAREA_AVG: Optional[float] = None
+    YEARS_BEGINEXPLUATATION_AVG: Optional[float] = None
+    YEARS_BUILD_AVG: Optional[float] = None
+    COMMONAREA_AVG: Optional[float] = None
+    ELEVATORS_AVG: Optional[float] = None
+    ENTRANCES_AVG: Optional[float] = None
+    FLOORSMAX_AVG: Optional[float] = None
+    FLOORSMIN_AVG: Optional[float] = None
+    LANDAREA_AVG: Optional[float] = None
+    LIVINGAPARTMENTS_AVG: Optional[float] = None
+    LIVINGAREA_AVG: Optional[float] = None
+    NONLIVINGAPARTMENTS_AVG: Optional[float] = None
+    NONLIVINGAREA_AVG: Optional[float] = None
+    TOTALAREA_MODE: Optional[float] = None
+    OBS_30_CNT_SOCIAL_CIRCLE: Optional[float] = None
+    DEF_30_CNT_SOCIAL_CIRCLE: Optional[float] = None
+    OBS_60_CNT_SOCIAL_CIRCLE: Optional[float] = None
+    DEF_60_CNT_SOCIAL_CIRCLE: Optional[float] = None
+    DAYS_LAST_PHONE_CHANGE: Optional[int] = None
+    FLAG_DOCUMENT_2: Optional[int] = None
+    FLAG_DOCUMENT_3: Optional[int] = None
+    FLAG_DOCUMENT_4: Optional[int] = None
+    FLAG_DOCUMENT_5: Optional[int] = None
+    FLAG_DOCUMENT_6: Optional[int] = None
+    FLAG_DOCUMENT_7: Optional[int] = None
+    FLAG_DOCUMENT_8: Optional[int] = None
+    FLAG_DOCUMENT_9: Optional[int] = None
+    FLAG_DOCUMENT_10: Optional[int] = None
+    FLAG_DOCUMENT_11: Optional[int] = None
+    FLAG_DOCUMENT_12: Optional[int] = None
+    FLAG_DOCUMENT_13: Optional[int] = None
+    FLAG_DOCUMENT_14: Optional[int] = None
+    FLAG_DOCUMENT_15: Optional[int] = None
+    FLAG_DOCUMENT_16: Optional[int] = None
+    FLAG_DOCUMENT_17: Optional[int] = None
+    FLAG_DOCUMENT_18: Optional[int] = None
+    FLAG_DOCUMENT_19: Optional[int] = None
+    FLAG_DOCUMENT_20: Optional[int] = None
+    FLAG_DOCUMENT_21: Optional[int] = None
+    AMT_REQ_CREDIT_BUREAU_HOUR: Optional[float] = None
+    AMT_REQ_CREDIT_BUREAU_DAY: Optional[float] = None
+    AMT_REQ_CREDIT_BUREAU_WEEK: Optional[float] = None
+    AMT_REQ_CREDIT_BUREAU_MON: Optional[float] = None
+    AMT_REQ_CREDIT_BUREAU_QRT: Optional[float] = None
+    AMT_REQ_CREDIT_BUREAU_YEAR: Optional[float] = None
+    nb_loans: Optional[float] = None
+    sum_debt: Optional[float] = None
+    AGE: Optional[float] = None
+    # Features engineering
+    CHILDREN_RATIO: Optional[float] = None
+    INCOME_PER_PERSON: Optional[float] = None
+    AGE_PER_MEMBER: Optional[float] = None
+    DAYS_EMPLOYED_PERC: Optional[float] = None
+    INCOME_CREDIT_PERC: Optional[float] = None
+    ANNUITY_INCOME_PERC: Optional[float] = None
+    PAYMENT_RATE: Optional[float] = None
+
+    # --- Catégorielles ---
+    NAME_CONTRACT_TYPE: Optional[str] = None
+    CODE_GENDER: Optional[str] = None
+    FLAG_OWN_CAR: Optional[str] = None
+    FLAG_OWN_REALTY: Optional[str] = None
+    NAME_TYPE_SUITE: Optional[str] = None
+    NAME_INCOME_TYPE: Optional[str] = None
+    NAME_EDUCATION_TYPE: Optional[str] = None
+    NAME_FAMILY_STATUS: Optional[str] = None
+    NAME_HOUSING_TYPE: Optional[str] = None
+    OCCUPATION_TYPE: Optional[str] = None
+    WEEKDAY_APPR_PROCESS_START: Optional[str] = None
+    ORGANIZATION_TYPE: Optional[str] = None
+    FONDKAPREMONT_MODE: Optional[str] = None
+    HOUSETYPE_MODE: Optional[str] = None
+    WALLSMATERIAL_MODE: Optional[str] = None
+    EMERGENCYSTATE_MODE: Optional[str] = None
+    CNT_CHILDREN_BIN: Optional[str] = None
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def _strip_strings(cls, v):
+        if isinstance(v, str):
+            s = v.strip()
+            return s if len(s) <= 255 else s[:255]
+        return v

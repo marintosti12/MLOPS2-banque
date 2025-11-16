@@ -1,37 +1,75 @@
+from datetime import datetime, timezone
+from uuid import uuid4
+import math
+
 from fastapi import APIRouter, Depends, HTTPException, Body, status
+from sqlalchemy.orm import Session
+import pandas as pd
+import numpy as np  
 
 from config.db import get_db
-from models.ml import MLModel 
-
+from models.ml import MLModel
 from models.ml_inputs import MLInput
 from models.ml_output import MLOutput
 
-import pandas as pd
-from model_loader import load_model           
+from model_loader import load_model
 from features import compute_features
+
 from schemas.PredictItemResult import PredictItemResult
 from schemas.PredictResponse import PredictResponse
-from schemas.PredictRequest import PredictRequest
-from sqlalchemy.orm import Session
+from schemas.PredictRequest import PredictRequest 
+from time import perf_counter
 
-router = APIRouter(prefix="/predict", tags=["Prédiction"])
+router = APIRouter(prefix="/predict", tags=["Solvabilité"])
 
 LABELS = {
-    "0": "reste_dans_l_entreprise",
-    "1": "parti_de_l_entreprise",
+    "0": "non_solvable",
+    "1": "solvable",
 }
+
+
+def series_to_jsonable(s: pd.Series) -> dict:
+    cleaned: dict = {}
+    for k, v in s.items():
+        if v is pd.NaT:
+            cleaned[k] = None
+            continue
+
+        if isinstance(v, np.floating):
+            if np.isnan(v):
+                cleaned[k] = None
+            else:
+                cleaned[k] = float(v)
+            continue
+
+        if isinstance(v, np.integer):
+            cleaned[k] = int(v)
+            continue
+
+        if isinstance(v, float):
+            if math.isnan(v) or math.isinf(v):
+                cleaned[k] = None
+            else:
+                cleaned[k] = v
+            continue
+
+        cleaned[k] = v
+
+    return cleaned
+
 
 @router.post(
     "/",
     response_model=PredictResponse,
     status_code=status.HTTP_200_OK,
-    summary="Prédire l’attrition d’un employé",
+    summary="Prédire la solvabilité d’un client (credit scoring)",
     description=(
-        "Calcule la probabilité d’attrition pour chaque entrée fournie.\n\n"
+        "Calcule la probabilité qu’un dossier soit **solvable**.\n\n"
         "**Notes**\n"
         "- `model_name` doit référencer un modèle *actif* en base (`MLModel`).\n"
         "- Les données d’entrée sont persistées (`MLInput`) puis les sorties (`MLOutput`) sont enregistrées.\n"
-        "- En cas d’erreur de features ou de prédiction, la requête retourne **400**.\n"
+        "- En cas d’erreur de préparation des features ou de prédiction, la requête retourne **400**.\n"
+        "- Les colonnes attendues correspondent à votre préprocesseur (`num_cols` / `cat_cols`).\n"
     ),
     responses={
         200: {"description": "Prédictions calculées avec succès."},
@@ -41,121 +79,132 @@ LABELS = {
     },
 )
 def batch_predict(
-    payload: PredictRequest = Body(
-        ...,
-        examples={
-            "cas-minimal": {
-                "summary": "Exemple minimal",
-                "value": {
-                    "model_name": "best_model",
-                    "inputs": [
-                        {
-                            "id_employee": 123,
-                            "age": 35,
-                            "genre": "Homme",
-                            "revenu_mensuel": 4200
-                        }
-                    ],
-                },
-            },
-            "cas-complet": {
-                "summary": "Exemple complet",
-                "value": {
-                    "model_name": "best_model",
-                    "inputs": [
-                        {
-                            "id_employee": 123,
-                            "age": 35,
-                            "genre": "Homme",
-                            "revenu_mensuel": 4200,
-                            "statut_marital": "Célibataire",
-                            "departement": "Ventes",
-                            "poste": "Commercial",
-                            "nombre_experiences_precedentes": 2,
-                            "nombre_heures_travailless": 40,
-                            "annee_experience_totale": 5,
-                            "annees_dans_l_entreprise": 2,
-                            "annees_dans_le_poste_actuel": 1,
-                            "nombre_participation_pee": 1,
-                            "nb_formations_suivies": 3,
-                            "nombre_employee_sous_responsabilite": 0,
-                            "code_sondage": 7,
-                            "distance_domicile_travail": 12,
-                            "niveau_education": 3,
-                            "domaine_etude": "Marketing",
-                            "ayant_enfants": "Non",
-                            "frequence_deplacement": "Rarement",
-                            "annees_depuis_la_derniere_promotion": 0,
-                            "annes_sous_responsable_actuel": 1,
-                            "satisfaction_employee_environnement": 3,
-                            "note_evaluation_precedente": 4,
-                            "niveau_hierarchique_poste": 2,
-                            "satisfaction_employee_nature_travail": 3,
-                            "satisfaction_employee_equipe": 4,
-                            "satisfaction_employee_equilibre_pro_perso": 3,
-                            "eval_number": "E2",
-                            "note_evaluation_actuelle": 4,
-                            "heure_supplementaires": "Non",
-                            "augementation_salaire_precedente": 11
-                        }
-                    ],
-                },
-            },
-        },
-    ),
+    payload: PredictRequest = Body(...),
     db: Session = Depends(get_db),
 ):
-    row = (
-        db.query(MLModel)
-        .filter(MLModel.name == payload.model_name)
-        .first()
-    )
+    start_time = perf_counter()
 
-    objs = [MLInput(**x.model_dump()) for x in payload.inputs]
-    db.add_all(objs)
-    db.commit()
-
+    row = db.query(MLModel).filter(MLModel.name == payload.model_name).first()
     if not row or getattr(row, "is_active", True) is False:
         raise HTTPException(status_code=404, detail="Modèle introuvable ou inactif")
 
     try:
-        m = load_model(payload.model_name)
+        model = load_model(payload.model_name)
+        classes = getattr(model, "classes_", [0, 1])
+        classes = [int(c) for c in classes]
     except Exception as e:
+        print(e)
         raise HTTPException(
             status_code=500,
             detail=f"Chargement du modèle '{payload.model_name}' impossible: {e}",
         )
 
+    # --- Préparation des features ---
     try:
-        df = pd.DataFrame([x.model_dump() for x in payload.inputs])
-        X = compute_features(df)
+        df_raw = pd.DataFrame([x.model_dump() for x in payload.inputs])
+
+        try:
+            X = compute_features(df_raw.copy())
+        except Exception:
+            # fallback sans préprocessing si problème
+            X = df_raw.copy()
+
+        X = X.reset_index(drop=True)
+        df_raw = df_raw.reset_index(drop=True)
+
+    except Exception as e:
+        print(e)
+        raise HTTPException(
+            status_code=400,
+            detail=f"Erreur de préparation des features: {e}",
+        )
+
+    request_id = str(uuid4())
+    now = datetime.now(timezone.utc)
+
+    # --- Persistance des entrées (MLInput) ---
+    try:
+        ml_input_rows: list[MLInput] = []
+        for i in range(len(df_raw)):
+            raw_dict = series_to_jsonable(df_raw.iloc[i])
+            feat_dict = series_to_jsonable(X.iloc[i])
+
+            ml_input = MLInput(
+                created_at=now,
+                model_name=payload.model_name,
+                raw_data=raw_dict,
+                features=feat_dict,
+            )
+            ml_input_rows.append(ml_input)
+
+        db.add_all(ml_input_rows)
+        db.flush()
+
+    except Exception as e:
+        print(e)
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Erreur lors de l'enregistrement des entrées: {e}",
+        )
+
+    # --- Prédiction & persistance des sorties (MLOutput) ---
+    try:
+        probas = model.predict_proba(X)
+        i_def = classes.index(1)
+        i_sol = classes.index(0)
+        THRESH = 0.5
 
         results: list[PredictItemResult] = []
+        ml_output_rows: list[MLOutput] = []
 
-        probas = m.predict_proba(X)
-        classes = getattr(m, "classes_", None)
+        elapsed_ms = int((perf_counter() - start_time) * 1000)
 
-        for idx, p in enumerate(probas):
-            i = int(p.argmax())
-            key = str(classes[i]) if classes is not None else str(i)
-            label = LABELS.get(key, key)
 
-            pred = PredictItemResult(label=label, proba=float(p[i]))
-            results.append(pred)
+        for i, p in enumerate(probas):
+            p_def = float(p[i_def])
+            p_sol = float(p[i_sol])
 
-            db.add(
-                MLOutput(
-                    input_id=objs[idx].id,
-                    prediction=label,
-                    prob=float(p[i]),
-                )
+            if p_def >= THRESH:
+                label = "non_solvable"
+                proba_retour = p_def
+            else:
+                label = "solvable"
+                proba_retour = p_sol
+
+            results.append(
+                PredictItemResult(label=label, proba=proba_retour)
             )
 
+            ml_out = MLOutput(
+                input_id=ml_input_rows[i].id,
+                model_name=payload.model_name,
+                model_version=getattr(row, "version", None),
+                prediction=label,
+                prob=proba_retour,
+                proba_defaut=p_def,
+                proba_solvable=p_sol,
+                threshold=THRESH,
+                classes=classes,
+                latency_ms=elapsed_ms,     
+                meta={
+                    "request_id": request_id,
+                    "elapsed_ms": elapsed_ms,
+                },
+                created_at=now,
+            )
+            ml_output_rows.append(ml_out)
+
+        db.add_all(ml_output_rows)
         db.commit()
 
     except Exception as e:
+        print(e)
         db.rollback()
-        raise HTTPException(status_code=400, detail=f"Erreur pendant la prédiction: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Erreur pendant la prédiction: {e}",
+        )
 
     return PredictResponse(
         model_name=payload.model_name,

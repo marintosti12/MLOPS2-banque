@@ -22,7 +22,6 @@ UPSERT = text("""
 
 def seed_ml_models(session: Session):
     rows = [
-        {"id": "5b1c7b3a-0000-4000-8000-000000000001", "name": "baseline",   "description": "Baseline model", "is_active": True},
         {"id": "5b1c7b3a-0000-4000-8000-000000000002", "name": "best_model", "description": "Best model",        "is_active": False},
     ]
     now = datetime.now(timezone.utc)

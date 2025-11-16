@@ -27,8 +27,15 @@ pydantic-settings = "^2.11.0"
 psycopg = {extras = ["binary"], version = "^3.2.12"}
 huggingface-hub = "^1.1.2"
 dotenv = "^0.9.9"
+evidently = "^0.7.16"
 
+
+[tool.poetry.group.dev.dependencies]
+requests = "^2.32.5"
+snakeviz = "^2.2.2"
+gprof2dot = "^2025.4.14"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
