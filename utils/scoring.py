@@ -1,4 +1,4 @@
-from sklearn.metrics import average_precision_score, make_scorer, precision_score, recall_score, f1_score, accuracy_score, roc_auc_score
+from sklearn.metrics import average_precision_score, make_scorer, precision_score, recall_score, f1_score, roc_auc_score
 from sklearn.model_selection import StratifiedKFold, cross_validate
 
 

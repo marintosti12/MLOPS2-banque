@@ -29,6 +29,7 @@ huggingface-hub = "^1.1.2"
 dotenv = "^0.9.9"
 evidently = "^0.7.16"
 pytest = "^9.0.1"
+ruff = "^0.14.6"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -44,3 +45,13 @@ build-backend = "poetry.core.masonry.api"
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+
+[tool.ruff]
+src = ["src"]
+
+exclude = [
+    ".venv",
+    "migrations",
+    "alembic",
+    "notebooks",
+]
