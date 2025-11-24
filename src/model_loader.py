@@ -5,7 +5,7 @@ from typing import Any, Literal
 from huggingface_hub import hf_hub_download
 import joblib
 
-HF_REPO_ID  = os.getenv("HF_REPO_ID",  "Marintosti/attrition")
+HF_REPO_ID  = os.getenv("HF_REPO_ID",  "Marintosti/mlops2_models")
 HF_TOKEN    = os.getenv("HF_TOKEN")      
 
 ENV: Literal["dev", "test", "prod"] = os.getenv("APP_ENV", "dev").lower()
