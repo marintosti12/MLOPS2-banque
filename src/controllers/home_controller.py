@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from config.db import get_db
-from models.ml import MLModel
+from src.config.db import get_db
+from src.models.ml import MLModel
 
 router = APIRouter(tags=["Models"])
 

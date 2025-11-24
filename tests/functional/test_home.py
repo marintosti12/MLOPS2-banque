@@ -6,8 +6,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from src.main import app
-from config.db import get_db
-from models.ml import MLModel
+from src.config.db import get_db
+from src.models.ml import MLModel
 
 
 def test_list_ml_models_simple(tmp_path):

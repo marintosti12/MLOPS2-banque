@@ -7,17 +7,18 @@ from sqlalchemy.orm import Session
 import pandas as pd
 import numpy as np  
 
-from config.db import get_db
-from models.ml import MLModel
-from models.ml_inputs import MLInput
-from models.ml_output import MLOutput
+from src.config.db import get_db
+from src.models.ml import MLModel
+from src.models.ml_inputs import MLInput
+from src.models.ml_output import MLOutput
 
-from model_loader import load_model
-from features import compute_features
+from src.model_loader import load_model
+from src.features import compute_features
 
-from schemas.PredictItemResult import PredictItemResult
-from schemas.PredictResponse import PredictResponse
-from schemas.PredictRequest import PredictRequest 
+from src.schemas.PredictItemResult import PredictItemResult
+from src.schemas.PredictResponse import PredictResponse
+from src.schemas.PredictRequest import PredictRequest 
+
 from time import perf_counter
 
 router = APIRouter(prefix="/predict", tags=["Solvabilité"])

@@ -1,7 +1,7 @@
 from typing import List
 from pydantic import BaseModel
 
-from schemas.PredictItemResult import PredictItemResult
+from src.schemas.PredictItemResult import PredictItemResult
 
 
 class PredictResponse(BaseModel):
