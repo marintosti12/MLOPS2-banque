@@ -2,8 +2,8 @@
 from fastapi import FastAPI
 
 
-from controllers.home_controller import router as ml_home_router
-from controllers.predict_controller import router as predict_router
+from src.controllers.home_controller import router as ml_home_router
+from src.controllers.predict_controller import router as predict_router
 
 
 app = FastAPI(title="ML API",

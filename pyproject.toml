@@ -28,6 +28,7 @@ psycopg = {extras = ["binary"], version = "^3.2.12"}
 huggingface-hub = "^1.1.2"
 dotenv = "^0.9.9"
 evidently = "^0.7.16"
+pytest = "^9.0.1"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -39,3 +40,7 @@ gprof2dot = "^2025.4.14"
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
