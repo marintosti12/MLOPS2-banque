@@ -17,18 +17,18 @@ jobs:
         env:
           POSTGRES_USER: ci
           POSTGRES_PASSWORD: ci
-          POSTGRES_DB: futurisys_ci
+          POSTGRES_DB: pret
 
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U ci -d futurisys_ci"
+          --health-cmd="pg_isready -U ci -d pret"
           --health-interval=5s
           --health-timeout=5s
           --health-retries=20
 
     env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DATABASE_URL:  postgresql+psycopg://ci:ci@localhost:5432/pret
       HF_TOKEN: ${{ secrets.HF_TOKEN }}
       APP_ENV: test
 
