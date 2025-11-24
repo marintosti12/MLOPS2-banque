@@ -67,7 +67,6 @@ tmp/
 temp/
 
 # --- Modèles / artefacts de training ---
-models/
 artifacts/
 checkpoints/
 *.pt
