@@ -17,6 +17,7 @@ def _load_local(name: str) -> Any:
         raise FileNotFoundError(
             f"Modèle local introuvable: {path}. "
         )
+        
     return joblib.load(path)
 
 @lru_cache(maxsize=1)
