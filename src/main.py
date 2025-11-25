@@ -4,6 +4,7 @@ from fastapi import FastAPI
 
 from src.controllers.home_controller import router as ml_home_router
 from src.controllers.predict_controller import router as predict_router
+from src.middleware.profiling import ProfilingMiddleware
 
 
 app = FastAPI(title="ML API",
@@ -12,6 +13,11 @@ API d’inférence pour la prédiction d’attrition.
 - **/predict**: prédire un résultat selon le modèle
 - **/models**: lister les modèles disponibles
 """, version="1.0.0")
+
+app.add_middleware(
+    ProfilingMiddleware, 
+    enabled=True,
+)
 
 app.include_router(ml_home_router)
 
