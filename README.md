@@ -143,7 +143,7 @@ poetry run alembic upgrade head
 ### 7. Lancer l’API
 
 ~~~bash
-poetry run uvicorn main:app --reload --app-dir src
+poetry run uvicorn src.main:app --reload 
 ~~~
 
 ### 8. Huggings Face
