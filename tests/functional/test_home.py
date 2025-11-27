@@ -11,7 +11,6 @@ from src.models.ml import MLModel
 
 
 def test_list_ml_models_simple(tmp_path):
-    # Création d'une base SQLite temporaire
     db_path = tmp_path / "testing.db"
     engine = create_engine(
         f"sqlite:///{db_path}",
@@ -27,7 +26,6 @@ def test_list_ml_models_simple(tmp_path):
 
     MLModel.__table__.create(bind=engine)
 
-    # Session dédiée au test
     session = SQLSession()
 
     def get_db_override():

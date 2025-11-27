@@ -11,13 +11,20 @@ pinned: false
 
 📖 Présentation du projet
 
-Cette API permet de prédire l’attrition des employés à partir de données RH.
-Elle a pour objectif d’aider les équipes RH à identifier les risques de départ et mettre en place des actions préventives.
+Cette API fournit un service d’inférence permettant d’évaluer la solvabilité d’un client dans le cadre d’une demande de prêt.
+Elle s’intègre dans un pipeline MLOps complet incluant versioning des modèles, monitoring, conteneurisation et automatisation CI/CD.
 
-- 📊 **Lister** les modèles ML disponibles (`/`)
-- 🤖 **Prédire** avec un modèle donné (`/predict`)
-- 🗄️ **Sauvegarder** automatiquement les inputs et outputs en base
-- 📚 **Documentation Swagger/OpenAPI** générée automatiquement
+🧭 Fonctionnalités principales
+
+📊 Lister les modèles ML disponibles (/models)
+
+🤖 Prédire la solvabilité d’un client (/predict)
+
+🗄️ Enregistrer automatiquement les données d’entrée et de sortie en base
+
+📚 Documentation OpenAPI/Swagger générée automatiquement
+
+🐳 Déploiement Docker-Ready
 
 ---
 
@@ -33,8 +40,8 @@ Elle a pour objectif d’aider les équipes RH à identifier les risques de dép
 
 ### 1. Cloner le dépôt
 ~~~bash
-git clone https://github.com/marintosti12/deploy-machine-learning.git
-cd deploy-machine-learning
+git https://github.com/marintosti12/MLOPS2-banque.git
+cd MLOPS2-banque
 ~~~
 
 
@@ -56,7 +63,7 @@ HF_REPO_ID= Repo Hugging Face
 ~~~
 
 
-### 4. Base de données (PostgreSQL)
+### 4. Base de données / Grafana
 
 ~~~bash
 sudo docker compose up -d
@@ -66,130 +73,71 @@ sudo docker compose up -d
 
 ~~~mermaid
 classDiagram
-  direction LR
+    direction LR
 
-  class MLModel {
-    +String(36) id
-    +String name
-    +Text description
-    +DateTime created_at
-    +Boolean is_active
-  }
+    class MLModel {
+        +UUID id
+        +String name
+        +Text description
+        +DateTime created_at
+        +Boolean is_active
+    }
 
-  class MLInput {
-    +String(36) id
-    +DateTime created_at
-    +Int id_employee
-    +Int age
-    +String genre
-    +Int revenu_mensuel
-    +String statut_marital
-    +String departement
-    +String poste
-    +Int nombre_experiences_precedentes
-    +Int nombre_heures_travailless
-    +Int annee_experience_totale
-    +Int annees_dans_l_entreprise
-    +Int annees_dans_le_poste_actuel
-    +Int nombre_participation_pee
-    +Int nb_formations_suivies
-    +Int nombre_employee_sous_responsabilite
-    +Int code_sondage
-    +Int distance_domicile_travail
-    +Int niveau_education
-    +String domaine_etude
-    +String ayant_enfants
-    +String frequence_deplacement
-    +Int annees_depuis_la_derniere_promotion
-    +Int annes_sous_responsable_actuel
-    +Int satisfaction_employee_environnement
-    +Int note_evaluation_precedente
-    +Int niveau_hierarchique_poste
-    +Int satisfaction_employee_nature_travail
-    +Int satisfaction_employee_equipe
-    +Int satisfaction_employee_equilibre_pro_perso
-    +String eval_number
-    +Int note_evaluation_actuelle
-    +String heure_supplementaires
-    +Int augementation_salaire_precedente
-  }
+    class MLInput {
+        +UUID id
+        +DateTime created_at
+        +String model_name
+        +JSONB raw_data
+        +JSONB features
+    }
 
-  
+    class MLOutput {
+        +UUID id
+        +UUID input_id
+        +String request_id
+        +String model_name
+        +String model_version
+        +DateTime created_at
+        +Integer latency_ms
+        +String prediction
+        +Float prob
+        +Float proba_defaut
+        +Float proba_solvable
+        +Float threshold
+        +JSONB classes
+        +JSONB meta
+        +String error
+    }
 
-  class MLOutput {
-    +String(36) id
-    +DateTime created_at
-    +String(36) input_id  (FK -> MLInput.id)
-    +String prediction
-    +Float prob
-    +String error
-  }
+    class ProfilingLog {
+        +UUID id
+        +DateTime created_at
+        +String endpoint
+        +String method
+        +String model_name
+        +Float total_time_ms
+        +Integer num_predictions
+        +Float time_preprocessing_ms
+        +Float time_inference_ms
+        +Float time_database_ms
+        +Float time_serialization_ms
+        +JSON top_functions
+        +Integer ncalls_total
+        +Integer ncalls_pandas
+        +Integer ncalls_database
+        +Float cpu_percent
+        +Float memory_mb
+        +Text full_profile
+    }
 
-  class EmployeeDataset {
-    +BigInteger id  
-    +DateTime created_at  
-    +Integer id_employee  
-
-    +Integer age
-    +String genre
-    +Integer revenu_mensuel
-    +String statut_marital
-    +String departement  
-    +String poste
-
-    +Integer nombre_experiences_precedentes
-    +Integer nombre_heures_travailless
-    +Integer annee_experience_totale
-    +Integer annees_dans_l_entreprise
-    +Integer annees_dans_le_poste_actuel
-
-    +Integer a_quitte_l_entreprise
-
-    +Integer nombre_participation_pee
-    +Integer nb_formations_suivies
-    +Integer nombre_employee_sous_responsabilite
-
-    +Integer code_sondage
-    +Integer distance_domicile_travail
-    +Integer niveau_education
-    +String domaine_etude
-
-    +String ayant_enfants
-    +String frequence_deplacement
-
-    +Integer annees_depuis_la_derniere_promotion
-    +Integer annes_sous_responsable_actuel
-    +Integer satisfaction_employee_environnement
-    +Integer note_evaluation_precedente
-    +Integer niveau_hierarchique_poste
-    +Integer satisfaction_employee_nature_travail
-    +Integer satisfaction_employee_equipe
-    +Integer satisfaction_employee_equilibre_pro_perso
-
-    +String eval_number  
-    +Integer note_evaluation_actuelle
-    +String heure_supplementaires
-    +Integer augementation_salaire_precedente
-
-    +String source_file  
-}
-
-  %% Relations
-  MLInput "1" --> "0..*" MLOutput
+    %% Relations
+    MLInput "1" --> "0..*" MLOutput : input_id
 ~~~
 
 ### 5. Lancer Migrations
 
 ~~~bash
-export DATABASE_URL='postgresql+asyncpg://futu:futu_pass@localhost:5432/futurisys'
 poetry run alembic upgrade head
-~~~
-
-### 6. Lancer Seeder
-
-~~~bash
-export DATABASE_URL='postgresql+psycopg2://futu:futu_pass@localhost:5432/futurisys'
-poetry run python src/seeds/ml_models_seed.py 
 ~~~
 
 ### 7. Lancer l’API

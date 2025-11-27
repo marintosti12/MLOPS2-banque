@@ -1,4 +1,3 @@
-# src/models/ml_output.py
 from __future__ import annotations
 
 import uuid

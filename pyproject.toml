@@ -36,6 +36,7 @@ ruff = "^0.14.6"
 requests = "^2.32.5"
 snakeviz = "^2.2.2"
 gprof2dot = "^2025.4.14"
+pytest-cov = "^7.0.0"
 
 [build-system]
 requires = ["poetry-core"]

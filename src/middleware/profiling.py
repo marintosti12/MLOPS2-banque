@@ -62,11 +62,13 @@ class ProfilingMiddleware(BaseHTTPMiddleware):
         stats.sort_stats(pstats.SortKey.CUMULATIVE)
         
         top_funcs = []
-        for func, (nc, ct) in list(stats.stats.items())[:limit]:
+        for func, data in list(stats.stats.items())[:limit]:
+            cc, nc, tt, ct, callers = data
             filename, line, func_name = func
+
             top_funcs.append({
                 "name": func_name,
-                "file": filename.split('/')[-1],
+                "file": filename.split("/")[-1],
                 "line": line,
                 "time_ms": ct * 1000,
                 "calls": nc,
@@ -76,50 +78,53 @@ class ProfilingMiddleware(BaseHTTPMiddleware):
     
     def _extract_specific_timings(self, stats: pstats.Stats) -> dict:
         timings = {
-            "preprocessing": 0,
-            "inference": 0,
-            "database": 0,
-            "serialization": 0,
+            "preprocessing": 0.0,
+            "inference": 0.0,
+            "database": 0.0,
+            "serialization": 0.0,
         }
         
-        for func, (ct) in stats.stats.items():
-            filename, func_name = func
+        for func, data in stats.stats.items():
+            cc, nc, tt, ct, callers = data
+            filename, line, func_name = func
             time_ms = ct * 1000
             
             func_name_lower = func_name.lower()
             file_name_lower = filename.lower()
             
             # Preprocessing
-            if 'compute_features' in func_name_lower or 'features.py' in file_name_lower:
+            if "compute_features" in func_name_lower or "features.py" in file_name_lower:
                 timings["preprocessing"] += time_ms
             
             # Inference
-            elif 'predict_proba' in func_name_lower:
+            elif "predict_proba" in func_name_lower:
                 timings["inference"] += time_ms
             
             # Database
-            elif 'psycopg' in file_name_lower or 'sqlalchemy' in file_name_lower:
-                if any(kw in func_name_lower for kw in ['wait', 'execute', 'flush', 'commit']):
+            elif "psycopg" in file_name_lower or "sqlalchemy" in file_name_lower:
+                if any(kw in func_name_lower for kw in ["wait", "execute", "flush", "commit"]):
                     timings["database"] += time_ms
             
             # Serialization
-            elif any(kw in func_name_lower for kw in ['json', 'dumps', 'serialize']):
+            elif any(kw in func_name_lower for kw in ["json", "dumps", "serialize"]):
                 timings["serialization"] += time_ms
         
         return timings
     
-    def _count_calls_by_category(self, stats: pstats.Stats) -> tuple:
+    def _count_calls_by_category(self, stats: pstats.Stats) -> tuple[int, int, int]:
         ncalls_total = 0
         ncalls_pandas = 0
         ncalls_db = 0
         
-        for func, (nc) in stats.stats.items():
-            filename = func
+        for func, data in stats.stats.items():
+            cc, nc, tt, ct, callers = data
+            filename, line, func_name = func
+
             ncalls_total += nc
             
-            if 'pandas' in filename:
+            if "pandas" in filename:
                 ncalls_pandas += nc
-            elif 'sqlalchemy' in filename or 'psycopg' in filename:
+            elif "sqlalchemy" in filename or "psycopg" in filename:
                 ncalls_db += nc
         
         return ncalls_total, ncalls_pandas, ncalls_db
@@ -139,10 +144,10 @@ class ProfilingMiddleware(BaseHTTPMiddleware):
     ):
         db: Session = SessionLocal()
         try:
-            time_preprocessing = timings["preprocessing"] if timings["preprocessing"] > 0 else None
-            time_inference = timings["inference"] if timings["inference"] > 0 else None
-            time_database = timings["database"] if timings["database"] > 0 else None
-            time_serialization = timings["serialization"] if timings["serialization"] > 0 else None
+            time_preprocessing = timings.get("preprocessing") or None
+            time_inference = timings.get("inference") or None
+            time_database = timings.get("database") or None
+            time_serialization = timings.get("serialization") or None
 
             log = ProfilingLog(
                 endpoint=endpoint,

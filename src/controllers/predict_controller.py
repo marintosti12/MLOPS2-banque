@@ -4,6 +4,7 @@ import math
 
 from fastapi import APIRouter, Depends, HTTPException, Body, status
 from sqlalchemy.orm import Session
+from sqlalchemy import insert
 import pandas as pd
 import numpy as np  
 
@@ -63,14 +64,13 @@ def series_to_jsonable(s: pd.Series) -> dict:
     "/",
     response_model=PredictResponse,
     status_code=status.HTTP_200_OK,
-    summary="Prédire la solvabilité d’un client (credit scoring)",
+    summary="Prédire la solvabilité d'un client (credit scoring)",
     description=(
-        "Calcule la probabilité qu’un dossier soit **solvable**.\n\n"
+        "Calcule la probabilité qu'un dossier soit **solvable**.\n\n"
         "**Notes**\n"
         "- `model_name` doit référencer un modèle *actif* en base (`MLModel`).\n"
-        "- Les données d’entrée sont persistées (`MLInput`) puis les sorties (`MLOutput`) sont enregistrées.\n"
-        "- En cas d’erreur de préparation des features ou de prédiction, la requête retourne **400**.\n"
-        "- Les colonnes attendues correspondent à votre préprocesseur (`num_cols` / `cat_cols`).\n"
+        "- Les données d'entrée sont persistées (`MLInput`) puis les sorties (`MLOutput`) sont enregistrées.\n"
+        "- En cas d'erreur de préparation des features ou de prédiction, la requête retourne **400**.\n"
     ),
     responses={
         200: {"description": "Prédictions calculées avec succès."},
@@ -84,6 +84,8 @@ def batch_predict(
     db: Session = Depends(get_db),
 ):
     start_time = perf_counter()
+    request_id = str(uuid4())
+    now = datetime.now(timezone.utc)
 
     row = db.query(MLModel).filter(MLModel.name == payload.model_name).first()
     if not row or getattr(row, "is_active", True) is False:
@@ -94,62 +96,55 @@ def batch_predict(
         classes = getattr(model, "classes_", [0, 1])
         classes = [int(c) for c in classes]
     except Exception as e:
-        print(e)
+        print(f"[ERROR] Chargement modèle: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Chargement du modèle '{payload.model_name}' impossible: {e}",
         )
 
-    # --- Préparation des features ---
     try:
         df_raw = pd.DataFrame([x.model_dump() for x in payload.inputs])
 
         try:
             X = compute_features(df_raw.copy())
         except Exception:
-            # fallback sans préprocessing si problème
             X = df_raw.copy()
 
         X = X.reset_index(drop=True)
         df_raw = df_raw.reset_index(drop=True)
 
     except Exception as e:
-        print(e)
+        print(f"[ERROR] Préparation features: {e}")
         raise HTTPException(
             status_code=400,
             detail=f"Erreur de préparation des features: {e}",
         )
 
-    request_id = str(uuid4())
-    now = datetime.now(timezone.utc)
-
-    # --- Persistance des entrées (MLInput) ---
     try:
-        ml_input_rows: list[MLInput] = []
+        input_dicts = []
         for i in range(len(df_raw)):
             raw_dict = series_to_jsonable(df_raw.iloc[i])
             feat_dict = series_to_jsonable(X.iloc[i])
 
-            ml_input = MLInput(
-                created_at=now,
-                model_name=payload.model_name,
-                raw_data=raw_dict,
-                features=feat_dict,
-            )
-            ml_input_rows.append(ml_input)
+            input_dicts.append({
+                "created_at": now,
+                "model_name": payload.model_name,
+                "raw_data": raw_dict,
+                "features": feat_dict,
+            })
 
-        db.add_all(ml_input_rows)
-        db.flush()
+        stmt = insert(MLInput).returning(MLInput.id)
+        result = db.execute(stmt, input_dicts)
+        input_ids = [row[0] for row in result.fetchall()]
 
     except Exception as e:
-        print(e)
+        print(f"[ERROR] Bulk insert MLInput: {e}")
         db.rollback()
         raise HTTPException(
             status_code=400,
             detail=f"Erreur lors de l'enregistrement des entrées: {e}",
         )
 
-    # --- Prédiction & persistance des sorties (MLOutput) ---
     try:
         probas = model.predict_proba(X)
         i_def = classes.index(1)
@@ -157,10 +152,9 @@ def batch_predict(
         THRESH = 0.5
 
         results: list[PredictItemResult] = []
-        ml_output_rows: list[MLOutput] = []
+        output_dicts = []
 
         elapsed_ms = int((perf_counter() - start_time) * 1000)
-
 
         for i, p in enumerate(probas):
             p_def = float(p[i_def])
@@ -177,30 +171,30 @@ def batch_predict(
                 PredictItemResult(label=label, proba=proba_retour)
             )
 
-            ml_out = MLOutput(
-                input_id=ml_input_rows[i].id,
-                model_name=payload.model_name,
-                model_version=getattr(row, "version", None),
-                prediction=label,
-                prob=proba_retour,
-                proba_defaut=p_def,
-                proba_solvable=p_sol,
-                threshold=THRESH,
-                classes=classes,
-                latency_ms=elapsed_ms,     
-                meta={
+            output_dicts.append({
+                "input_id": input_ids[i],
+                "model_name": payload.model_name,
+                "model_version": getattr(row, "version", None),
+                "prediction": label,
+                "prob": proba_retour,
+                "proba_defaut": p_def,
+                "proba_solvable": p_sol,
+                "threshold": THRESH,
+                "classes": classes,
+                "latency_ms": elapsed_ms,
+                "meta": {
                     "request_id": request_id,
                     "elapsed_ms": elapsed_ms,
                 },
-                created_at=now,
-            )
-            ml_output_rows.append(ml_out)
+                "created_at": now,
+            })
 
-        db.add_all(ml_output_rows)
+        db.execute(insert(MLOutput), output_dicts)
+
         db.commit()
 
     except Exception as e:
-        print(e)
+        print(f"[ERROR] Prédiction/bulk insert: {e}")
         db.rollback()
         raise HTTPException(
             status_code=400,
