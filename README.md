@@ -160,7 +160,7 @@ Sur Hugging Face (Models), stocker les artefacts du modèle dans le dépôt du S
 poetry run ruff check .
 ~~~
 
-### 🧪 Tests & Couverture
+### 🧪 Tests & Couvertur
 
 **Lancer les tests :**
 ```bash
